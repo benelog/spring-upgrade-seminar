@@ -29,7 +29,8 @@
 - jar에 없는 파일은 HTTP로 읽어옴 - 불필요한 성능 저하
 - 서버에서 <http://www.springframework.org/schema/beans/>에 접근을 못한다면?
 
-        nested exception is org.xml.sax.SAXParseException: cvc-elt.1: Cannot find the declaration of element 'beans'.
+        nested exception is org.xml.sax.SAXParseException: 
+            cvc-elt.1: Cannot find the declaration of element 'beans'.
 
 ### Dependency 변화
 - Optional dependency
@@ -377,7 +378,7 @@
     	- <http://blog.springsource.org/2012/11/12/spring-framework-3-2-rc1-spring-mvc-test-framework/>
     	- <http://blog.springsource.org/2012/12/13/spring-framework-3-2-goes-ga/>
 - 상세변경 이력
-	- Deprecated : <http://static.springsource.org/spring-framework/docs/3.2.x/javadoc-api/deprecated-list.html >
+	- Deprecated : <http://static.springsource.org/spring-framework/docs/3.2.x/javadoc-api/deprecated-list.html>
 	- 변경 패키지, 클래스 목록 : <http://static.springsource.org/spring-framework/docs/3.1.3.RELEASE_to_3.2.0.RELEASE/>
 	- Change log : <http://static.springsource.org/spring/docs/3.2.x/changelog.txt>
 
