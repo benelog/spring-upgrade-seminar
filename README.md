@@ -93,27 +93,28 @@
        -  파라미터 지원여부는 [MethodParameter](https://github.com/SpringSource/spring-framework/blob/master/spring-core/src/main/java/org/springframework/core/MethodParameter.java) 만으로 판단
 - supportsParameter(..) 메서드의 결과는 캐쉬 ([HandlerMethodArgumentResolverComposite](https://github.com/SpringSource/spring-framework/blob/master/spring-web/src/main/java/org/springframework/web/method/support/HandlerMethodArgumentResolverComposite.java) )
 -  ServletWebArgumentResolverAdapter,AbstractWebArgumentResolverAdapter로 WebArgumentResolver -> MethodArgumentResolver 변환
+    - 최초 호출시에 WebArgumentResolver.resolveArgument 가 2번 호출됨
+    - WebArguementResolver에서의  Exception을 무시
 
-           @Override
-        public boolean supportsParameter(MethodParameter parameter) {
-            try {
-                NativeWebRequest webRequest = getWebRequest();
-                Object result = this.adaptee.resolveArgument(parameter, webRequest);
-                 if (result == WebArgumentResolver.UNRESOLVED) {
-                      return false;
-                 }
-                 else {
-                     return ClassUtils.isAssignableValue(parameter.getParameterType(), result);
+            @Override
+            public boolean supportsParameter(MethodParameter parameter) {
+                try {
+                    NativeWebRequest webRequest = getWebRequest();
+                    Object result = this.adaptee.resolveArgument(parameter, webRequest);
+                     if (result == WebArgumentResolver.UNRESOLVED) {
+                          return false;
+                     }
+                     else {
+                         return ClassUtils.isAssignableValue(parameter.getParameterType(), result);
+                    }
+                }   catch (Exception ex) {
+                     // ignore (see class-level doc)
+                     logger.debug("Error in checking support for parameter [" + parameter + "], message: " + ex.getMessage());
+                    return false;
                 }
-            }   catch (Exception ex) {
-                 // ignore (see class-level doc)
-                 logger.debug("Error in checking support for parameter [" + parameter + "], message: " + ex.getMessage());
-                return false;
             }
-        }
         
-- 최초 호출시에 WebArgumentResolver.resolveArgument 가 2번 호출됨
-        - WebArguementResolver에서의  Exception을 무시
+
 - HandlerMethodArgumentResolver로 반드시 재구현해야 하는 경우
     - resolveArgument(..) 메소드가   NativeWebRequest 안에 들어간  값에 따라서 UNRESOLVED가 반환될 수 있는 경우. 
     - resolveArgument(..) 메소드가 Exception을 던질 수 있는 가능성이 있을 때 
