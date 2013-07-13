@@ -183,12 +183,13 @@
 
         <spring:message scope="${param.name}"/>
 
-그 페이지를 호출할떄 name=${applicationScope}
+그 페이지를 호출할 때 name=${applicationScope} 로 쓰면 아래와 같이 인식
 
         <spring:message scope="${applicationScope}"/>
 
 - 원인
-    - JSP 2.0이하에서도 EL을 지원하기 위한 Spring의 기능 때문
+    - JSP 2.0이하에서도 EL을 지원하기 위한 Spring의 기능 때문.
+        - ${param.name} 대신 &lt;c:out value=${param.name}&gt;을 써야했던 시절 
 - 해결방안
     - Spring 3.1.x 버전 이상 사용
     - Spring 3.0.6 혹은 2.5.6.SEC03버전 이상 사용 + web.xml에 추가선언
@@ -200,10 +201,10 @@
             </context-param>
             
 - 조치 코드 분석
-    - [3.0.x의 ExpressionEvaluationUtils](https://github.com/SpringSource/spring-framework/blob/3.0.x/org.springframework.web/src/main/java/org/springframework/web/util/ExpressionEvaluationUtils.java) 
+    - [3.0.x의 ExpressionEvaluationUtils](https://github.com/SpringSource/spring-framework/blob/3.0.x/org.springframework.web/src/main/java/org/springframework/web/util/ExpressionEvaluationUtils.java).isSpringJspExpressionSupportActive().
         - web.xml의 내용을 읽어서 옵션 판단
-    - [3.1.x의 ExpressionEvaluationUtils](https://github.com/SpringSource/spring-framework/blob/3.1.x/org.springframework.web/src/main/java/org/springframework/web/util/ExpressionEvaluationUtils.java) 
-        - Servlet스펙의 버전을 읽어서 판단
+    - [3.1.x의 ExpressionEvaluationUtils](https://github.com/SpringSource/spring-framework/blob/3.1.x/org.springframework.web/src/main/java/org/springframework/web/util/ExpressionEvaluationUtils.java).isSpringJspExpressionSupportActive()
+        - Servlet스펙 2.4이상 일때는 Spring에서 다시 평가하지 않음.
 
 - 자세한 내용은 <https://gist.github.com/benelog/4582041>
 
@@ -224,7 +225,7 @@
 ### MVC Test
 - API 통합테스트에 유용
 - JSP 내용까지 나오지는 않음
-- 테스트코드 입문자에게 좋음
+- 테스트코드 입문자에게 추천
 
         @RunWith(SpringJUnit4ClassRunner.class)
         @WebAppConfiguration
@@ -275,7 +276,7 @@
     - ServletConfig 파라미터
     - 직접 지정한 파일명
 - 명확한 에러.
-- 똑같이 선언. Locations가 없어도 됨.
+- 똑같이 선언. Locations가 없어도 됨. ${api.url} 과 같이 사용.
 
     <context:property-placeholder />
 - context:property-placeholder의 기본 등록 클래스 변경
