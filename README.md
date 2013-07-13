@@ -4,6 +4,7 @@
 	- NHN Business Platform 웹플랫폼개발랩
 	- Java 프레임워크 개발, 기술지원, 교육
 	- Tech@NHN 시리즈 공저자, Helloworld 기고
+	- Java, TDD, Spring, Android
 
 - 얻을 수 있는 것
 	- Spring 쓰시는 분
@@ -13,7 +14,6 @@
 	- Spring 안 쓰시는 분
 		- 공통 모듈/ 프레임워크 개선 사례
 		- 인터페이스, 클래스 설계 원칙
-		- 성능 개선 기법
 - 기대하지 말아야할 것
 	- Spring 3.1, 3.2의 신규 기능의 자세한 소개
 		- 참고자료로 대신 제공
@@ -23,7 +23,8 @@
 	<beans 
 		xmlns="http://www.springframework.org/schema/beans"
 		xsi:schemaLocation=
-			"http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd">
+			"http://www.springframework.org/schema/beans
+			 http://www.springframework.org/schema/beans/spring-beans-3.1.xsd">
 
 - jar에 없는 파일은 HTTP로 읽어옴 - 불필요한 성능 저하
 - 서버에서 <http://www.springframework.org/schema/beans/>에 접근을 못한다면?
@@ -122,7 +123,8 @@
 ### HandlerInterceptor
 - interface는 그대로 
 
-        public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        public boolean preHandle(HttpServletRequest request, HttpServletResponse response, 
+            Object handler) throws Exception {
         
         ....
         
@@ -282,8 +284,9 @@
 - 똑같이 선언. Locations가 없어도 됨. ${api.url} 과 같이 사용.
 
     <context:property-placeholder />
+    
 - context:property-placeholder의 기본 등록 클래스 변경
-    - PropertyPlaceholderConfigurer -> PropertySourcesPlaceholderConfigurer
+     - PropertyPlaceholderConfigurer -> PropertySourcesPlaceholderConfigurer
 
 ### 대표적 추가기능
 - Spring 3.1
