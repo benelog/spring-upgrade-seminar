@@ -139,6 +139,7 @@
         ....
         
         }
+
 - 3.1부터 3번째 파라미터인 hander의 type이 HandlerMethod로 바뀜
     - 메서드에 대한 정보를 제공 : getReturnType(), getMethodParameters()
 
@@ -148,7 +149,11 @@
     - SimpleJdbcTestUtils -> JdbcTestUtils 
 - 3.1 -> 3.2
     - Spring 3.0까지 사용되는 MVC 기반 클래스 : AnnotationMethodHandlerAdapter 등
-    - iBatis 지원클래스 : SqlMapClientTemplate, SqlMapClientDaoSupport    
+    - iBatis 지원클래스 : SqlMapClientTemplate, SqlMapClientDaoSupport
+- Spring LOC : <http://www.ohloh.net/p/spring>
+    - 갑자기 코드가 내려간 시점이 3.0출시로 추정
+    - 4.0에서도 많은 코드가 없어질 가능성에 대비해야함
+![Spring LOC](http://file.benelog.net/include/spring-upgrade/spring-loc.png)
 
 ## 개선 지점 심층 분석 
 ### ViewResolver의 Cache
