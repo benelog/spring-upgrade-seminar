@@ -38,6 +38,7 @@
     [spring.schemas](https://github.com/SpringSource/spring-framework/blob/master/spring-beans/src/main/resources/META-INF/spring.schemas)의 선언에 의해 연결 
     
     - <http://www.springframework.org/schema/beans/spring-beans.xsd>는 최신 버전
+
 ### Dependency 변화
 - Optional dependency
 	- spring-tx -> spring-core 등
