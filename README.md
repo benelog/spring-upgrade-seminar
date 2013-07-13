@@ -9,6 +9,7 @@
 	- Spring 쓰시는 분
 		- 실무에서 이슈가 되었던 부분(보안/성능/하위 호환성)
 		- 버전업 체크리스트
+		- Spring의 일부 코드를 리뷰
 	- Spring 안 쓰시는 분
 		- 공통 모듈/ 프레임워크 개선 사례
 		- 인터페이스, 클래스 설계 원칙
@@ -58,7 +59,7 @@
             </property><property name="order" value="-1"/>
         </bean>
         
-        ->
+->
 
             <mvc:annotation-driven>
                 <mvc:argument-resolvers>
@@ -71,9 +72,9 @@
 - WebArgumentResolver
 
         public interface WebArgumentResolver {
-   Object UNRESOLVED = new Object();
-   Object resolveArgument(MethodParameter methodParameter, NativeWebRequest webRequest) throws Exception;
-}
+            Object UNRESOLVED = new Object();
+            Object resolveArgument(MethodParameter methodParameter, NativeWebRequest webRequest) throws Exception;
+        }
 
 - MethodArgumentResolver
 
@@ -114,6 +115,8 @@
     - resolveArgument(..) 메소드가   NativeWebRequest 안에 들어간  값에 따라서 UNRESOLVED가 반환될 수 있는 경우. 
     - resolveArgument(..) 메소드가 Exception을 던질 수 있는 가능성이 있을 때 
 - 문제가 없는 경우라도 되도록 재구현 권장
+    - cache되는 영역은 반복호출되지 않아서 성능 이득
+    - 역할 분담으로 코드 가독성 향상
 
 ### HandlerInterceptor
 - interface는 그대로 
@@ -135,18 +138,74 @@
 
 ## 개선 지점 심층 분석 
 ### ViewResolver의 Cache
-- OOM 가능성
+- "redirect:form.html?entityId=3" 유형의 OOM 가능성
+    - Controller에서 String으로 return 혹은 ModelAndView.setViewName(..)으로 지정하면 AbstractCachingViewResolver에서 View를 해석후 cache.
+    - view name에 id등이 포함되면 계속 새로운 View가 생성  
+    - 2012년 12월 03일 : 이슈 올라옴 ( [SPR-10065](https://jira.springsource.org/browse/SPR-10065 ) )
+    - 2012년 12월 11일 : [Commit](https://github.com/SpringSource/spring-framework/commit/9deaefe74d9b79d22328ae0f1ede0830ac30ce20) by Juergen Hoeller
+        - 오래된 View를 지우는 구현이 추가. 
+        - LinkedHashMap.removeEldestEntry() override해서 활용
+        - 2012년 12월 13일 : 3.2 GA 버전에 포함되어 Release
+        - 2013년 01월 23일 : 3.1.4 버전에도 포함되어 Release
+
 - 3.0 이전의 해결책
     - View를 return
-- 3.1의 해결책
+- 3.1의 이후 해결책
     - RequestAttribute
+    
+            @RequestMapping(method = RequestMethod.POST)
+            public String onPost(RedirectAttributes attrs) {
+                ...
+                attrs.addAttribute(entityId, 123);
+                return "redirect:form.html;   // resulting URL has entityId=123
+            }
+
     - URI Template
-- 3.2
-	- OOM 가능성 방어 코드
-	- 그래도 Cache효율성을 고려할 필요가 있음
+        
+            return "redirect:form.html?entityId={entityId}";
+
+- 3.2.GA, 3.1.4이후의 OOM  방어 코드
+    - 그래도 Cache효율성을 고려해서 URI template등 활용이 바람직.
+- 3.2.2 이후의 성능 최적화
+    - [SPR-3145](https://jira.springsource.org/browse/SPR-3145) (2006/12/26) : Performance improvement on AbstractCachingViewResolver
+        - Cache를 HashMap + synchronized block 대신 ConcurrentHashMap으로 바꾸자는 의견이 있었으나 JDK5지원으로 하지 못했었음.
+    - [Commit](https://github.com/SpringSource/spring-framework/commit/06c6cbb6b92655e1b0f5b76380d2e5f1c4b7b493) by Juergen Hoeller
+        - LinkedHashMap과 ConcurrentHashMap을 같이 사용.
+        - OOM방어에 활용한 LinkedHashMap.removeEldestEntry()이 ConcurrentHashMap에는 없기 때문.
 
 ### EL injection 방어
-- <https://gist.github.com/benelog/4582041>
+- 취약점의 조건 (AND조건)
+    - EL 2.2를 지원하는 서블릿 컨테이너를 쓰거나 EL 2.2 라이브러리를 직접 jar파일로 참조해서 쓰고 있다. (대표적으로 Tomcat 7.x혹은 Glassfish 2.2.x)
+    - Spring 3.1.x 미만 버전을 쓰고 있다.
+    - Spring의 JSP Tag( <spring:message.. 등)을 쓰고 있다.
+    - Spring의 JSP Tag에서 EL을 지원하는 속성에 사용자가 입력한 값이 들어갈 수 있다.
+- 현상 : double evaluation.
+
+        <spring:message scope="${param.name}"/>
+
+그 페이지를 호출할떄 name=${applicationScope}
+
+        <spring:message scope="${applicationScope}"/>
+
+- 원인
+    - JSP 2.0이하에서도 EL을 지원하기 위한 Spring의 기능 때문
+- 해결방안
+    - Spring 3.1.x 버전 이상 사용
+    - Spring 3.0.6 혹은 2.5.6.SEC03버전 이상 사용 + web.xml에 추가선언
+    
+            <context-param>
+                 <description>Spring Expression Language Support</description>
+                 <param-name>springJspExpressionSupport</param-name>
+                 <param-value>false</param-value>
+            </context-param>
+            
+- 조치 코드 분석
+    - [3.0.x의 ExpressionEvaluationUtils](https://github.com/SpringSource/spring-framework/blob/3.0.x/org.springframework.web/src/main/java/org/springframework/web/util/ExpressionEvaluationUtils.java) 
+        - web.xml의 내용을 읽어서 옵션 판단
+    - [3.1.x의 ExpressionEvaluationUtils](https://github.com/SpringSource/spring-framework/blob/3.1.x/org.springframework.web/src/main/java/org/springframework/web/util/ExpressionEvaluationUtils.java) 
+        - Servlet스펙의 버전을 읽어서 판단
+
+- 자세한 내용은 <https://gist.github.com/benelog/4582041>
 
 ### Method ArgumentResolver로 내부구조 개선
 - 3.0 이전
@@ -163,11 +222,65 @@
     
 ##당장 써야 할 신규기능
 ### MVC Test
-    - API 통합테스트에 유용
-    - JSP 내용까지 나오지는 않음
-    - 테스트코드 입문자에게 좋음
+- API 통합테스트에 유용
+- JSP 내용까지 나오지는 않음
+- 테스트코드 입문자에게 좋음
+
+        @RunWith(SpringJUnit4ClassRunner.class)
+        @WebAppConfiguration
+        @ContextHierarchy({ 
+        	@ContextConfiguration({ "/spring/applicationContext.xml" }),
+        	@ContextConfiguration("/spring/mvc-config.xml")
+        })
+        public class HomeMvcTest {
+        	@Autowired
+        	private WebApplicationContext wac;
+        
+        	private MockMvc mvc;
+        
+        	@Before
+        	public void setup() {
+        		this.mvc = webAppContextSetup(this.wac).build();
+        	}
+        
+        	@Test
+        	public void home() throws Exception {
+        	    mvc.perform(get("/"))
+        		   .andExpect(status().isOk())
+        		   .andExpect(view().name("home"));
+        	}
+        
+        	@Test
+        	public void imageJson() throws Exception {
+        	    mvc.perform(get("/viewImage/cloud.json"))
+        		   .andExpect(status().isOk())
+        		   	.andExpect(content().string("{\"src\":\"/img/cloud.png\",\"height\":64,\"width\":64}"));
+        	}
+        
+        	@Test
+        	public void containsImagePath() throws Exception {
+        	    mvc.perform(get("/viewImage/phone.json"))
+        		   .andExpect(status().isOk())
+        		   	.andExpect(content().string(containsString("/img/phone.png")));
+        	}
+        }
+
+
 ### 통합 Resource 관리
-    - 보다 명확한 에러
+- 다양한 환경변수를 같은 방식으로
+    - OS 환경변수 : System.getEnv()로 읽어오는 OS 레벨에 선언된 변수들
+    - 시스템 프로퍼티 : System.getProperties()로 참조하는 값들. -D옵션으로 지정된 값, JVM 관련정보 -java.home, 등
+    - JNDI
+    -SerlvetContext 파라미터
+    - ServletConfig 파라미터
+    - 직접 지정한 파일명
+- 명확한 에러.
+- 똑같이 선언. Locations가 없어도 됨.
+
+    <context:property-placeholder />
+- context:property-placeholder의 기본 등록 클래스 변경
+    - PropertyPlaceholderConfigurer -> PropertySourcesPlaceholderConfigurer
+
 ### 대표적 추가기능
 - Spring 3.1
 	- Cache absraction : @Cacheable
