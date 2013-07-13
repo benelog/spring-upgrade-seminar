@@ -61,7 +61,8 @@
 - &lt;mvc:annotation-driven/&gt;를 쓸 때 옛날 클래스와 같이 쓰지 않도록 주의
 
         <mvc:annotation-driven/>
-        <bean id="handlerAdapter" class="org.springframework.web.servlet.mvc.annotation.AnnotationMethodHandlerAdapter">
+        <bean id="handlerAdapter"
+            class="org.springframework.web.servlet.mvc.annotation.AnnotationMethodHandlerAdapter">
             <property name="customArgumentResolvers">
                <array>
                      <bean class="net.benelog.UserArgumentResolver"/>
