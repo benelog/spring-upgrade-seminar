@@ -48,6 +48,7 @@
 	- 이름을 보면
 		- 'Annotation'은 이제 당연하므로 생략.
 		- @RequestMapping이 연상되도록
+- Handler를 클래스가 단위가 아닌 메소드 단위로
 - &lt;mvc:annotation-driven/&gt;를 쓸 때 옛날 클래스와 같이 쓰지 않도록 주의
 
         <mvc:annotation-driven/>
@@ -127,6 +128,7 @@
         
         }
 - 3.1부터 3번째 파라미터인 hander의 type이 HandlerMethod로 바뀜
+    - 메서드에 대한 정보를 제공 : getReturnType(), getMethodParameters()
 
 ### 대표적 Deprecated
 - 3.0 -> 3.1
@@ -272,10 +274,11 @@
     - OS 환경변수 : System.getEnv()로 읽어오는 OS 레벨에 선언된 변수들
     - 시스템 프로퍼티 : System.getProperties()로 참조하는 값들. -D옵션으로 지정된 값, JVM 관련정보 -java.home, 등
     - JNDI
-    -SerlvetContext 파라미터
+    - SerlvetContext 파라미터
     - ServletConfig 파라미터
     - 직접 지정한 파일명
-- 명확한 에러.
+- 명확한 에러
+    - 3.0.x에서 적극적인 에러발견을 위해 SPel(#{api.url})을 쓰는 경우가 많았음.
 - 똑같이 선언. Locations가 없어도 됨. ${api.url} 과 같이 사용.
 
     <context:property-placeholder />
