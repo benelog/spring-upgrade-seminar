@@ -20,18 +20,24 @@
 	
 ## 버전을 올리면서 조심할 부분
 ### XSD 스키마 버전
-	<beans 
-		xmlns="http://www.springframework.org/schema/beans"
-		xsi:schemaLocation=
-			"http://www.springframework.org/schema/beans
-			 http://www.springframework.org/schema/beans/spring-beans-3.1.xsd">
+- 상위 버전의 코드를 복사해오거나 jar버전을 올렸다내렸다 할 때 주의
 
-- jar에 없는 파일은 HTTP로 읽어옴 - 불필요한 성능 저하
+    	<beans 
+    		xmlns="http://www.springframework.org/schema/beans"
+    		xsi:schemaLocation=
+    			"http://www.springframework.org/schema/beans
+    			 http://www.springframework.org/schema/beans/spring-beans-3.1.xsd">    
+- jar에 없는 상위버전의 파일은 HTTP로 읽어옴 - 불필요한 성능 저하
 - 서버에서 <http://www.springframework.org/schema/beans/>에 접근을 못한다면?
 
         nested exception is org.xml.sax.SAXParseException: 
             cvc-elt.1: Cannot find the declaration of element 'beans'.
-
+            
+- spring-beans.xsd 는 최신 버전으로 연결
+    - [jar안의 폴더](https://github.com/SpringSource/spring-framework/tree/master/spring-beans/src/main/resources/org/springframework/beans/factory/xml)에는 spring-beans.xsd가 없지만    
+    [spring.schemas](https://github.com/SpringSource/spring-framework/blob/master/spring-beans/src/main/resources/META-INF/spring.schemas)의 선언에 의해 연결 
+    
+    - <http://www.springframework.org/schema/beans/spring-beans.xsd>는 최신 버전
 ### Dependency 변화
 - Optional dependency
 	- spring-tx -> spring-core 등
