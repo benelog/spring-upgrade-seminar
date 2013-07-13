@@ -27,7 +27,7 @@
 - jar에 없는 파일은 HTTP로 읽어옴 - 불필요한 성능 저하
 - 서버에서 <http://www.springframework.org/schema/beans/>에 접근을 못한다면?
 
-	nested exception is org.xml.sax.SAXParseException: cvc-elt.1: Cannot find the declaration of element 'beans'.
+        nested exception is org.xml.sax.SAXParseException: cvc-elt.1: Cannot find the declaration of element 'beans'.
 
 ### Dependency 변화
 - Optional dependency
@@ -35,29 +35,112 @@
 	- 직접 선언하지 않으면 ClassNotFoundException
 -  spring-asm 모듈이 spring-core로 통합
 	- [[SPR-9669](https://jira.springsource.org/browse/SPR-9669)] Upgrade to ASM 4.0 and CGLIB 3.0 
-	- 별도의 dependency 선언이 필요없어졌음.
+	- 별도의 dependency 선언이 필요 없어졌음.
 
 
-### @MVC의 변화
+### @MVC의 기반 클래스 변경
 - 3.1 부터 MVC기반 클래스 변경
-	- <mvc:annotation-driven/>에 의해 등록되는 클래스들
+	- &lt;mvc:annotation-driven/&gt;에 의해 등록되는 클래스들
 	- HandlerMapping : DefaultAnnotationHandlerMapping -> RequestMappingHandlerMapping
 	- HandlerAdaptor : AnnotationMethodHandlerAdapter -> RequestMappingHandlerAdapter
 	- HandlerExceptionResolver : AnnotationMethodHandlerExceptionResolver -> ExceptionHandlerExceptionResolver 
 	- 이름을 보면
-		- Annotation은 이제 당연하므로 생략.
+		- 'Annotation'은 이제 당연하므로 생략.
 		- @RequestMapping이 연상되도록
-- <mvc:annotation-driven/>를 쓸 때 옛날 클래스와 같이 쓰지 않도록 주의
-- ArgumentResolver
-	- 역할과 책임 분담
-- HandlerInterceptor
-	- 3번째 파라미터
+- &lt;mvc:annotation-driven/&gt;를 쓸 때 옛날 클래스와 같이 쓰지 않도록 주의
+
+        <mvc:annotation-driven/>
+        <bean id="handlerAdapter" class="org.springframework.web.servlet.mvc.annotation.AnnotationMethodHandlerAdapter">
+            <property name="customArgumentResolvers">
+               <array>
+                     <bean class="net.benelog.UserArgumentResolver"/>
+               </array>
+            </property><property name="order" value="-1"/>
+        </bean>
+        
+        ->
+
+            <mvc:annotation-driven>
+                <mvc:argument-resolvers>
+                        <bean class="net.benelog.UserArgumentResolver"/>
+                </mvc:argument-resolvers>
+            </mvc:annotation-driven>
+        
+### ArgumentResolver
+- 3.1이후 WebArgumentResolver -> MethodArgumentResolver
+- WebArgumentResolver
+
+        public interface WebArgumentResolver {
+   Object UNRESOLVED = new Object();
+   Object resolveArgument(MethodParameter methodParameter, NativeWebRequest webRequest) throws Exception;
+}
+
+- MethodArgumentResolver
+
+        public interface HandlerMethodArgumentResolver {
+            boolean supportsParameter(MethodParameter parameter);
+            Object resolveArgument(MethodParameter parameter, 
+                                   ModelAndViewContainer mavContainer,
+                                   NativeWebRequest webRequest, 
+                                   WebDataBinderFactory binderFactory) throws Exception;
+    }
+
+- 파라미터 지원여부와 해석의 역할을 분리
+       -  파라미터 지원여부는 [MethodParameter](https://github.com/SpringSource/spring-framework/blob/master/spring-core/src/main/java/org/springframework/core/MethodParameter.java) 만으로 판단
+- supportsParameter(..) 메서드의 결과는 캐쉬 ([HandlerMethodArgumentResolverComposite](https://github.com/SpringSource/spring-framework/blob/master/spring-web/src/main/java/org/springframework/web/method/support/HandlerMethodArgumentResolverComposite.java) )
+-  ServletWebArgumentResolverAdapter,AbstractWebArgumentResolverAdapter로 WebArgumentResolver -> MethodArgumentResolver 변환
+
+           @Override
+        public boolean supportsParameter(MethodParameter parameter) {
+            try {
+                NativeWebRequest webRequest = getWebRequest();
+                Object result = this.adaptee.resolveArgument(parameter, webRequest);
+                 if (result == WebArgumentResolver.UNRESOLVED) {
+                      return false;
+                 }
+                 else {
+                     return ClassUtils.isAssignableValue(parameter.getParameterType(), result);
+                }
+            }   catch (Exception ex) {
+                 // ignore (see class-level doc)
+                 logger.debug("Error in checking support for parameter [" + parameter + "], message: " + ex.getMessage());
+                return false;
+            }
+        }
+        
+- 최초 호출시에 WebArgumentResolver.resolveArgument 가 2번 호출됨
+        - WebArguementResolver에서의  Exception을 무시
+- HandlerMethodArgumentResolver로 반드시 재구현해야 하는 경우
+    - resolveArgument(..) 메소드가   NativeWebRequest 안에 들어간  값에 따라서 UNRESOLVED가 반환될 수 있는 경우. 
+    - resolveArgument(..) 메소드가 Exception을 던질 수 있는 가능성이 있을 때 
+- 문제가 없는 경우라도 되도록 재구현 권장
+
+### HandlerInterceptor
+- interface는 그대로 
+
+        public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        
+        ....
+        
+        }
+- 3.1부터 3번째 파라미터인 hander의 type이 HandlerMethod로 바뀜
+
+### 대표적 Deprecated
+- 3.0 -> 3.1
+    - SimpleJdbcTemplate -> JdbcTemplate, NamedParameterJdbcTemplate
+    - SimpleJdbcTestUtils -> JdbcTestUtils 
+- 3.1 -> 3.2
+    - Spring 3.0까지 사용되는 MVC 기반 클래스 : AnnotationMethodHandlerAdapter 등
+    - iBatis 지원클래스 : SqlMapClientTemplate, SqlMapClientDaoSupport    
 
 ## 개선 지점 심층 분석 
 ### ViewResolver의 Cache
 - OOM 가능성
 - 3.0 이전의 해결책
+    - View를 return
 - 3.1의 해결책
+    - RequestAttribute
+    - URI Template
 - 3.2
 	- OOM 가능성 방어 코드
 	- 그래도 Cache효율성을 고려할 필요가 있음
@@ -65,7 +148,26 @@
 ### EL injection 방어
 - <https://gist.github.com/benelog/4582041>
 
+### Method ArgumentResolver로 내부구조 개선
+- 3.0 이전
+    - Controller의 메소드 파라미터의 HttpSession, Locale, OutputStream,  @PathVarible처리는 AnnotationMethodHandlerAdapter의 resolveStandardArgument(..)에서 담당. resolvePathVariable(..)에 포함
+    - WebArguemntResolver는 확징 지점만의 의미
+- 3.1 이후
+    - 기본 파라미터 처리도 별도의 MethodArgumentResolver로 분리
+- 기본 MethodArgumentResolver
+    - ServletRequestMethodArgumentResolver  : HttpServletRequest, HttpSession, InputStream, Reader, Locale 형의  파라미터의 해석
+    - ServletResponseMethodArgumentResolver : HttpServletResponse,  OutputStream, Writer 형의 파라미터 해석
+    - PathVariableMapMethodArgumentResolver :  @PathVarible 이 붙은  파라미터의 해석 
+    - RequestHeaderMethodArgumentResolver : @RequestHeader 가 붙은  파라미터의 해석
+    RequestParamMethodArgumentResolver : @RequestParam, @RequestPart 가 붙은  파라미터의 해석
+    
 ##당장 써야 할 신규기능
+### MVC Test
+    - API 통합테스트에 유용
+    - JSP 내용까지 나오지는 않음
+    - 테스트코드 입문자에게 좋음
+### 통합 Resource 관리
+    - 보다 명확한 에러
 ### 대표적 추가기능
 - Spring 3.1
 	- Cache absraction : @Cacheable
@@ -79,10 +181,6 @@
 	- Spring MVC Test Framework
 	- @ControllerAdvice
 	- Matrix variables
-
-### MVC Test
-
-### 통합 Resource 관리
 
 ## 시사점
 ### 환경변화에 맞춤
