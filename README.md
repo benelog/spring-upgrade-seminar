@@ -389,6 +389,7 @@
     	- <http://blog.springsource.org/2012/05/10/spring-mvc-3-2-preview-making-a-controller-method-asynchronous/>
     	- <http://blog.springsource.org/2012/05/13/spring-mvc-3-2-preview-adding-long-polling-to-an-existing-web-application/>
     	- <http://blog.springsource.org/2012/11/05/spring-framework-3-2-rc1-released/>
+    	- <https://spring.io/blog/2012/11/07/spring-framework-3-2-rc1-new-testing-features>
     	- <http://blog.springsource.org/2012/11/12/spring-framework-3-2-rc1-spring-mvc-test-framework/>
     	- <http://blog.springsource.org/2012/12/13/spring-framework-3-2-goes-ga/>
 - 상세변경 이력
